@@ -124,11 +124,11 @@ function Products() {
             <Grid container spacing={3}>
               {filteredProducts.map((product, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Paper sx={{ p: 2, mb: 3 }}>
+                  <Paper className="uiverse-card">
                     <img src={product.imageUrl} alt={product.name} className="product-image" />
                     <Typography variant="h6">{product.name}</Typography>
-                    <Typography variant="body2">{product.description}</Typography>
-                    <Typography variant="body1">${product.price}</Typography>
+                    <Typography variant="body2">{product.author}</Typography>
+                    <Typography variant="body1">₹{product.price}</Typography>
                   </Paper>
                 </Grid>
               ))}

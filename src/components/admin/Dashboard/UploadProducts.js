@@ -4,6 +4,7 @@ import { collection, addDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { v4 as uuidv4 } from 'uuid'; // Import UUID library
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -31,6 +32,7 @@ function UploadProducts() {
     stockQuantity: '',
     publisher: '',
     language: '',
+    imageUrl: '', // New field for image URL
     visibility: false // New field for visibility
   });
   const [message, setMessage] = useState("");
@@ -49,7 +51,8 @@ function UploadProducts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "products"), formData);
+      const productId = uuidv4(); // Generate a unique ID
+      await addDoc(collection(db, "products"), { id: productId, ...formData });
       setMessage("Product uploaded successfully!");
       setFormData({
         title: '',
@@ -60,6 +63,7 @@ function UploadProducts() {
         stockQuantity: '',
         publisher: '',
         language: '',
+        imageUrl: '',
         visibility: false
       });
     } catch (error) {
@@ -80,13 +84,19 @@ function UploadProducts() {
 
       try {
         for (const product of jsonData) {
+          const productId = uuidv4(); // Generate a unique ID for each product
           await addDoc(collection(db, "products"), {
+            id: productId,
             name: product.name,
+            author: product.author,
             price: product.price,
+            category: product.category,
             description: product.description,
+            stockQuantity: product.stockQuantity,
+            publisher: product.publisher,
+            language: product.language,
             imageUrl: product.imageUrl,
-            visibility: product.visibility,
-            category: product.category
+            visibility: product.visibility
           });
         }
         setBulkMessage("Bulk upload successful!");
@@ -94,6 +104,10 @@ function UploadProducts() {
         console.error("Error uploading products: ", error);
         setBulkMessage("Error uploading products. Please try again.");
       }
+    };
+    reader.onerror = (error) => {
+      console.error("Error reading file: ", error);
+      setBulkMessage("Error reading file. Please try again.");
     };
     reader.readAsArrayBuffer(file);
   };
@@ -136,7 +150,7 @@ function UploadProducts() {
                 margin="normal"
               />
               <TextField
-                label="Price"
+                label="Price (₹)"
                 name="price"
                 value={formData.price}
                 onChange={handleChange}
@@ -186,6 +200,14 @@ function UploadProducts() {
                 label="Language"
                 name="language"
                 value={formData.language}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Image URL"
+                name="imageUrl"
+                value={formData.imageUrl}
                 onChange={handleChange}
                 fullWidth
                 margin="normal"

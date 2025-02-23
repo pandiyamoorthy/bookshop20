@@ -93,19 +93,19 @@ function ViewProduct() {
           </Button>
         </div>
         {isGridView ? (
-          <Grid container spacing={2} className="grid-view">
+          <Grid container spacing={2} className="grid-view" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
             {filteredProducts.length === 0 ? (
               <Grid item xs={12}>
                 <p>No Books found.</p>
               </Grid>
             ) : (
               filteredProducts.map((product) => (
-                <Grid item xs={12} sm={6} md={4} key={product.id} className="product-card">
-                  <Paper sx={{ p: 2 }}>
+                <Grid item xs={12} sm={0} md={3} key={product.id} className="product-card">
+                  <Paper sx={{ p: 5, boxShadow: 5, border: '2px solid #ddd' }}>
                     <img src={product.imageUrl} alt={product.name} className="product-image" />
                     <Typography variant="h6">{product.name}</Typography>
                     <Typography variant="body2">{product.description}</Typography>
-                    <Typography variant="body1">${product.price}</Typography>
+                    <Typography variant="body1">₹{product.price}</Typography>
                     <Typography variant="body2">Visibility: {product.visibility ? "Public" : "Private"}</Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                       <IconButton aria-label="delete" size="large" onClick={() => handleDelete(product.id)}>
@@ -125,6 +125,7 @@ function ViewProduct() {
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell>ID</TableCell>
                   <TableCell>Image</TableCell>
                   <TableCell>Book Name</TableCell>
                   <TableCell>Description</TableCell>
@@ -137,17 +138,18 @@ function ViewProduct() {
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7}>No Books found.</TableCell>
+                    <TableCell colSpan={8}>No Books found.</TableCell>
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell>{product.id}</TableCell>
                       <TableCell>
                         <img src={product.imageUrl} alt={product.name} style={{ width: '50px', height: '50px' }} />
                       </TableCell>
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.description}</TableCell>
-                      <TableCell>${product.price}</TableCell>
+                      <TableCell>₹{product.price}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.visibility ? "Public" : "Private"}</TableCell>
                       <TableCell>
