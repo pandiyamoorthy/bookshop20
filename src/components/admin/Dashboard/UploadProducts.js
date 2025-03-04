@@ -4,7 +4,6 @@ import { collection, addDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID library
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -51,8 +50,7 @@ function UploadProducts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const productId = uuidv4(); // Generate a unique ID
-      await addDoc(collection(db, "products"), { id: productId, ...formData });
+      await addDoc(collection(db, "products"), { ...formData });
       setMessage("Product uploaded successfully!");
       setFormData({
         title: '',
@@ -84,9 +82,7 @@ function UploadProducts() {
 
       try {
         for (const product of jsonData) {
-          const productId = uuidv4(); // Generate a unique ID for each product
           await addDoc(collection(db, "products"), {
-            id: productId,
             name: product.name,
             author: product.author,
             price: product.price,

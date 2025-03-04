@@ -4,3 +4,4 @@ export { default as Products } from './Products/Products';
 export { default as AboutUs } from './AboutUs/AboutUs';
 export { default as ContactUs } from './ContactUs/ContactUs';
 export { default as Login } from './Login/Login';
+export { default as ProductDetails } from './ProductDetails/ProductDetails';

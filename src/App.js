@@ -11,6 +11,7 @@ import Products from './components/users/Products/Products';
 import ViewProduct from './components/admin/Dashboard/ViewProduct';
 import EditProducts from './components/admin/Dashboard/EditProducts';
 import Login from './Login';
+import ProductDetails from './components/users/ProductDetails/ProductDetails'; // Import ProductDetails
 
 function App() {
   const isAuthenticated = () => {
@@ -35,6 +36,7 @@ function App() {
           <Route path="edit-product/:id" element={<EditProducts />} />
         </Route>
         <Route path="/products" element={<Products />} />
+        <Route path="/product-details/:id" element={<ProductDetails />} /> {/* Add this route */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Login />} />
       </Routes>

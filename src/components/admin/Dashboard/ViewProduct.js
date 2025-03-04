@@ -12,38 +12,39 @@ function ViewProduct() {
   const [isGridView, setIsGridView] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
+  const fetchProducts = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const productsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log("Fetched products:", productsList); // Debugging log
+      setProducts(productsList);
+
+      // Calculate category counts
+      const counts = productsList.reduce((acc, product) => {
+        acc[product.category] = (acc[product.category] || 0) + 1;
+        return acc;
+      }, {});
+      setCategoryCounts(counts);
+    } catch (error) {
+      console.error("Error fetching products: ", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productsList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        console.log("Fetched products:", productsList); // Debugging log
-        setProducts(productsList);
-
-        // Calculate category counts
-        const counts = productsList.reduce((acc, product) => {
-          acc[product.category] = (acc[product.category] || 0) + 1;
-          return acc;
-        }, {});
-        setCategoryCounts(counts);
-      } catch (error) {
-        console.error("Error fetching products: ", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
 
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "products", id));
-      setProducts(products.filter(product => product.id !== id));
       console.log(`Product with id ${id} deleted`); // Debugging log
+      setProducts(products.filter(product => product.id !== id)); // Update state to remove deleted product
+      fetchProducts(); // Refetch data after deletion
     } catch (error) {
       console.error("Error deleting product: ", error);
     }
@@ -107,8 +108,11 @@ function ViewProduct() {
                     <Typography variant="body2">{product.description}</Typography>
                     <Typography variant="body1">₹{product.price}</Typography>
                     <Typography variant="body2">Visibility: {product.visibility ? "Public" : "Private"}</Typography>
+                    <Typography variant="body2">ID: {product.id}</Typography> {/* Display product ID */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                      <IconButton aria-label="delete" size="large" onClick={() => handleDelete(product.id)}>
+                      <IconButton aria-label="delete" size="large" onClick={async () => {
+                        await handleDelete(product.id);
+                      }}>
                         <DeleteIcon fontSize="inherit" />
                       </IconButton>
                       <Button variant="contained" href={`/edit-product/${product.id}`}>
@@ -125,35 +129,37 @@ function ViewProduct() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>ID</TableCell>
                   <TableCell>Image</TableCell>
                   <TableCell>Book Name</TableCell>
-                  <TableCell>Description</TableCell>
                   <TableCell>Price</TableCell>
                   <TableCell>Category</TableCell>
                   <TableCell>Visibility</TableCell>
+                  <TableCell>ID</TableCell> {/* Add ID column */}
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8}>No Books found.</TableCell>
+                    <TableCell colSpan={7}>No Books found.</TableCell>
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell>{product.id}</TableCell>
                       <TableCell>
                         <img src={product.imageUrl} alt={product.name} style={{ width: '50px', height: '50px' }} />
                       </TableCell>
                       <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.description}</TableCell>
                       <TableCell>₹{product.price}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.visibility ? "Public" : "Private"}</TableCell>
+                      <TableCell>{product.id}</TableCell> {/* Display product ID */}
                       <TableCell>
-                        <IconButton aria-label="delete" size="large" onClick={() => handleDelete(product.id)}>
+                        <IconButton aria-label="delete" size="large" onClick={async () => {
+                          await handleDelete(product.id);
+                          setProducts(products.filter(p => p.id !== product.id)); // Update state to remove deleted product
+                          fetchProducts(); // Refetch data after deletion
+                        }}>
                           <DeleteIcon fontSize="inherit" />
                         </IconButton>
                         <Button variant="contained" href={`/edit-product/${product.id}`}>

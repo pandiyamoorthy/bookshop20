@@ -3,6 +3,7 @@ import './Products.css';
 import { db } from '../../../firebase/config';
 import { collection, getDocs } from "firebase/firestore";
 import { TextField, Button, Select, MenuItem, InputLabel, FormControl, Box, Grid, Typography, Paper } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import '../Home/Home.css'; // Import Home CSS for Nav-Bar and Footer
 
 function Products() {
@@ -11,15 +12,18 @@ function Products() {
   const [category, setCategory] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
       const querySnapshot = await getDocs(collection(db, "products"));
       const productsList = querySnapshot.docs
-        .map(doc => doc.data())
+        .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(product => product.visibility === true); // Only include products with visibility set to true
       setProducts(productsList);
       setFilteredProducts(productsList);
+      setLoading(false);
     };
 
     fetchProducts();
@@ -42,6 +46,14 @@ function Products() {
 
     setFilteredProducts(filtered);
   };
+
+  const handleProductClick = (id) => {
+    navigate(`/product-details/${id}`);
+  };
+
+  if (loading) {
+    return <p>Loading Books...</p>;
+  }
 
   return (
     <div>
@@ -124,7 +136,7 @@ function Products() {
             <Grid container spacing={3}>
               {filteredProducts.map((product, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Paper className="uiverse-card">
+                  <Paper className="uiverse-card" onClick={() => handleProductClick(product.id)}>
                     <img src={product.imageUrl} alt={product.name} className="product-image" />
                     <Typography variant="h6">{product.name}</Typography>
                     <Typography variant="body2">{product.author}</Typography>
