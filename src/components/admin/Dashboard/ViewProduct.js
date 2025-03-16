@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../../firebase/config';
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { IconButton, Button, Typography, Box, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { IconButton, Button, Typography, Box, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Card, CardContent, CardMedia } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useNavigate } from 'react-router-dom';
 import './ViewProduct.css'; // Import the CSS file
 
 function ViewProduct() {
@@ -11,6 +12,7 @@ function ViewProduct() {
   const [categoryCounts, setCategoryCounts] = useState({});
   const [isGridView, setIsGridView] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const navigate = useNavigate();
 
   const fetchProducts = async () => {
     try {
@@ -62,6 +64,10 @@ function ViewProduct() {
     ? products.filter(product => product.category === selectedCategory)
     : products;
 
+  const handleEdit = (id) => {
+    navigate(`/admin/edit-product/${id}`);
+  };
+
   if (loading) {
     return <p>Loading Books...</p>;
   }
@@ -94,32 +100,47 @@ function ViewProduct() {
           </Button>
         </div>
         {isGridView ? (
-          <Grid container spacing={2} className="grid-view" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
+          <Grid container spacing={3}>
             {filteredProducts.length === 0 ? (
               <Grid item xs={12}>
                 <p>No Books found.</p>
               </Grid>
             ) : (
               filteredProducts.map((product) => (
-                <Grid item xs={12} sm={0} md={3} key={product.id} className="product-card">
-                  <Paper sx={{ p: 5, boxShadow: 5, border: '2px solid #ddd' }}>
-                    <img src={product.imageUrl} alt={product.name} className="product-image" />
-                    <Typography variant="h6">{product.name}</Typography>
-                    <Typography variant="body2">{product.description}</Typography>
-                    <Typography variant="body1">₹{product.price}</Typography>
-                    <Typography variant="body2">Visibility: {product.visibility ? "Public" : "Private"}</Typography>
-                    <Typography variant="body2">ID: {product.id}</Typography> {/* Display product ID */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                <Grid item xs={12} sm={6} md={4} key={product.id}>
+                  <Card sx={{ maxWidth: 345 }}>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={product.imageUrl}
+                      alt={product.title}
+                    />
+                    <CardContent>
+                      <Typography gutterBottom variant="h5" component="div">
+                        {product.title}
+                      </Typography>
+                      
+                      <Typography variant="body1" color="text.primary">
+                        ₹{product.price}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Visibility: {product.visibility ? "Public" : "Private"}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        ID: {product.id}
+                      </Typography>
+                    </CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2 }}>
                       <IconButton aria-label="delete" size="large" onClick={async () => {
                         await handleDelete(product.id);
                       }}>
                         <DeleteIcon fontSize="inherit" />
                       </IconButton>
-                      <Button variant="contained" href={`/edit-product/${product.id}`}>
+                      <Button variant="contained" onClick={() => handleEdit(product.id)}>
                         Edit
                       </Button>
                     </Box>
-                  </Paper>
+                  </Card>
                 </Grid>
               ))
             )}
@@ -149,7 +170,7 @@ function ViewProduct() {
                       <TableCell>
                         <img src={product.imageUrl} alt={product.name} style={{ width: '50px', height: '50px' }} />
                       </TableCell>
-                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.title}</TableCell>
                       <TableCell>₹{product.price}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.visibility ? "Public" : "Private"}</TableCell>
@@ -162,7 +183,7 @@ function ViewProduct() {
                         }}>
                           <DeleteIcon fontSize="inherit" />
                         </IconButton>
-                        <Button variant="contained" href={`/edit-product/${product.id}`}>
+                        <Button variant="contained" onClick={() => handleEdit(product.id)}>
                           Edit
                         </Button>
                       </TableCell>

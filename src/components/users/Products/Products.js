@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './Products.css';
 import { db } from '../../../firebase/config';
 import { collection, getDocs } from "firebase/firestore";
-import { TextField, Button, Select, MenuItem, InputLabel, FormControl, Box, Grid, Typography, Paper } from '@mui/material';
+import { TextField, Button, Select, MenuItem, InputLabel, FormControl, Box, Grid, Typography, Paper, Card, CardContent, CardMedia } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import '../Home/Home.css'; // Import Home CSS for Nav-Bar and Footer
 
@@ -57,7 +57,7 @@ function Products() {
 
   return (
     <div>
-      <section id="header">
+      <section id="header" style={{ marginBottom: '150px' }}>
         <a href="/"><img src="image/logo.jpg" alt="logo" width="25%" /></a>
         <input type="text" placeholder="Search Books" id="search-bar" />
 
@@ -86,7 +86,7 @@ function Products() {
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, position: 'sticky', top: '80px', mb: 3 }}>
+            <Paper sx={{ p: 2, position: 'sticky', top: '80px', mb: 3,marginTop: '20px' }}>
               <Typography variant="h6" gutterBottom>
                 Filters
               </Typography>
@@ -135,13 +135,31 @@ function Products() {
           <Grid item xs={12} md={9}>
             <Grid container spacing={3}>
               {filteredProducts.map((product, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Paper className="uiverse-card" onClick={() => handleProductClick(product.id)}>
-                    <img src={product.imageUrl} alt={product.name} className="product-image" />
-                    <Typography variant="h6">{product.name}</Typography>
-                    <Typography variant="body2">{product.author}</Typography>
-                    <Typography variant="body1">₹{product.price}</Typography>
-                  </Paper>
+                <Grid item xs={12} sm={6} md={4} key={index} sx={{ mb: 3 }}>
+                  <Card 
+                    onClick={() => handleProductClick(product.id)} 
+                    className="product-card" 
+                    sx={{ cursor: 'pointer', backgroundColor: '#f0f0f0' }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="200"
+                      image={product.imageUrl}
+                      alt={product.title || 'No title available'}
+                      sx={{ objectFit: 'contain' }}
+                    />
+                    <CardContent>
+                      <Typography variant="h6" component="div">
+                        {product.title || 'No title available'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {product.author}
+                      </Typography>
+                      <Typography variant="body1" color="text.primary">
+                        ₹{product.price}
+                      </Typography>
+                    </CardContent>
+                  </Card>
                 </Grid>
               ))}
             </Grid>
@@ -153,7 +171,7 @@ function Products() {
         <div className="col">
           <a href="/"><img className="logo" src="image/logo.jpg" alt="logo" width="10%"/></a>
           <h4>Contact</h4>
-          <p><strong>Address:</strong> 349, Olorilogbon street, Onigbogbo Lagos</p>
+          <p><strong>Address:</strong> sivakasi , North street weak</p>
           <p><strong>Phone:</strong> +23456876199, +23458903120</p>
           <p><strong>Hours:</strong> 10.00 - 18.00, Mon - Sat</p>
           <div className="follow">
@@ -162,8 +180,8 @@ function Products() {
               <i className="fab fa-facebook-f"></i>
               <i className="fab fa-instagram"></i>
               <i className="fab fa-twitter"></i>
-              <i className="fab fa-youtube"></i>
-              <i className="fab fa-pinterest-p"></i>
+              <i class="fab fa-youtube"></i>
+              <i class="fab fa-pinterest-p"></i>
             </div>
           </div>
         </div>

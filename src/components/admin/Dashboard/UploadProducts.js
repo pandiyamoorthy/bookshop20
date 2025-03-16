@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../../../firebase/config';
 import { collection, addDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
-import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper } from '@mui/material';
+import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper, FormControl, FormLabel, RadioGroup, Radio } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -26,36 +26,61 @@ function UploadProducts() {
     title: '',
     author: '',
     price: '',
+    originalPrice: '',
+    offer: '',
     category: '',
     description: '',
     stockQuantity: '',
     publisher: '',
     language: '',
-    imageUrl: '', // New field for image URL
-    visibility: false // New field for visibility
+    imageUrl: '',
+    visibility: false
   });
   const [message, setMessage] = useState("");
-  const [bulkMessage, setBulkMessage] = useState(""); // New state for bulk upload message
-  const [newCategory, setNewCategory] = useState(''); // State to manage new category
+  const [bulkMessage, setBulkMessage] = useState("");
+  const [newCategory, setNewCategory] = useState('');
   const [categories, setCategories] = useState([
     "Fiction", "Non-Fiction", "Science-Fiction", "History", "Fantasy", 
     "Competitive-books", "Self-help", "Children's-Books", "bio-auto"
-  ]); // State to manage list of categories
+  ]);
+  const [imageOption, setImageOption] = useState('url');
+  const [imageFile, setImageFile] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
   };
 
+  const handleImageOptionChange = (e) => {
+    setImageOption(e.target.value);
+    setFormData({ ...formData, imageUrl: '' });
+    setImageFile(null);
+  };
+
+  const handleImageFileChange = (e) => {
+    setImageFile(e.target.files[0]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "products"), { ...formData });
+      let imageUrl = formData.imageUrl;
+      if (imageOption === 'file' && imageFile) {
+        // Upload image file to storage and get URL (implementation depends on your storage solution)
+        // For example, using Firebase Storage:
+        // const storageRef = firebase.storage().ref();
+        // const fileRef = storageRef.child(imageFile.name);
+        // await fileRef.put(imageFile);
+        // imageUrl = await fileRef.getDownloadURL();
+      }
+      await addDoc(collection(db, "products"), { ...formData, imageUrl });
       setMessage("Product uploaded successfully!");
       setFormData({
         title: '',
         author: '',
         price: '',
+        originalPrice: '',
+        offer: '',
         category: '',
         description: '',
         stockQuantity: '',
@@ -64,9 +89,10 @@ function UploadProducts() {
         imageUrl: '',
         visibility: false
       });
+      setImageFile(null);
     } catch (error) {
       console.error("Error uploading product: ", error);
-      setMessage("Error uploading product. Please try again.");
+      setMessage(`Error uploading product: ${error.message}`);
     }
   };
 
@@ -83,9 +109,11 @@ function UploadProducts() {
       try {
         for (const product of jsonData) {
           await addDoc(collection(db, "products"), {
-            name: product.name,
+            title: product.title,
             author: product.author,
             price: product.price,
+            originalPrice: product.originalPrice,
+            offer: product.offer,
             category: product.category,
             description: product.description,
             stockQuantity: product.stockQuantity,
@@ -98,12 +126,12 @@ function UploadProducts() {
         setBulkMessage("Bulk upload successful!");
       } catch (error) {
         console.error("Error uploading products: ", error);
-        setBulkMessage("Error uploading products. Please try again.");
+        setBulkMessage(`Error uploading products: ${error.message}`);
       }
     };
     reader.onerror = (error) => {
       console.error("Error reading file: ", error);
-      setBulkMessage("Error reading file. Please try again.");
+      setBulkMessage(`Error reading file: ${error.message}`);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -149,6 +177,22 @@ function UploadProducts() {
                 label="Price (₹)"
                 name="price"
                 value={formData.price}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Original Price (₹)"
+                name="originalPrice"
+                value={formData.originalPrice}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Offer (%)"
+                name="offer"
+                value={formData.offer}
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
@@ -200,14 +244,43 @@ function UploadProducts() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
-                label="Image URL"
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-              />
+              <FormControl component="fieldset" sx={{ mt: 2 }}>
+                <FormLabel component="legend">Image Source</FormLabel>
+                <RadioGroup
+                  row
+                  aria-label="image-source"
+                  name="image-source"
+                  value={imageOption}
+                  onChange={handleImageOptionChange}
+                >
+                  <FormControlLabel value="url" control={<Radio />} label="Image URL" />
+                  <FormControlLabel value="file" control={<Radio />} label="Upload Image" />
+                </RadioGroup>
+              </FormControl>
+              {imageOption === 'url' ? (
+                <TextField
+                  label="Image URL"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                />
+              ) : (
+                <Button
+                  variant="contained"
+                  component="label"
+                  fullWidth
+                  sx={{ mt: 2 }}
+                >
+                  Upload Image
+                  <input
+                    type="file"
+                    hidden
+                    onChange={handleImageFileChange}
+                  />
+                </Button>
+              )}
               <FormControlLabel
                 control={
                   <Checkbox

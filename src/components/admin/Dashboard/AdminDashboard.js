@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText, CssBaseline } from '@mui/material';
-import { Dashboard, Upload, ListAlt, People, Settings as SettingsIcon, Visibility } from '@mui/icons-material';
+import { Dashboard, Upload, ListAlt, People, Settings as SettingsIcon, Visibility, Edit } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate, Outlet } from 'react-router-dom';
 
@@ -53,6 +53,7 @@ function AdminDashboard() {
     { text: 'Manage Users', icon: <People />, path: '/dashboard/manage-users' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/dashboard/settings' },
     { text: 'View Books', icon: <Visibility />, path: '/dashboard/view-products' },
+    { text: 'Edit Book', icon: <Edit />, path: '/dashboard/edit-books' }, // Updated path
   ];
 
   return (
