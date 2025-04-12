@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../../firebase/config';
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper, Container, Snackbar } from '@mui/material';
+import { db, storage } from '../../../firebase/config';
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper, Container, Snackbar, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormLabel, FormControl } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 
@@ -25,6 +26,8 @@ function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    imageOption: 'url',
+    imageFile: null,
     title: '',
     author: '',
     price: '',
@@ -44,6 +47,7 @@ function EditProduct() {
     "Competitive-books", "Self-help", "Children's-Books", "bio-auto"
   ]);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   // Fetch product details
   useEffect(() => {
@@ -69,7 +73,18 @@ function EditProduct() {
   // Handle input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+    if (type === 'file') {
+      const file = e.target.files[0];
+      if (file) {
+        setFormData({ ...formData, imageFile: file });
+      }
+    } else {
+      setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+    }
+  };
+
+  const handleImageOptionChange = (e) => {
+    setFormData({ ...formData, imageOption: e.target.value, imageFile: null });
   };
 
   // Validate form before submission
@@ -91,7 +106,16 @@ function EditProduct() {
     if (!validateForm()) return;
 
     try {
-      await updateDoc(doc(db, "products", id), { ...formData });
+      let imageUrl = formData.imageUrl;
+      if (formData.imageOption === 'file' && formData.imageFile) {
+        const storageRef = ref(storage, `products/${Date.now()}-${formData.imageFile.name}`);
+        await uploadBytes(storageRef, formData.imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+      const updateData = { ...formData, imageUrl };
+      delete updateData.imageOption;
+      delete updateData.imageFile;
+      await updateDoc(doc(db, "products", id), updateData);
       setMessage({ type: "success", text: "Product updated successfully!" });
       setOpenSnackbar(true);
       setTimeout(() => navigate('/admin/view-products'), 2000);
@@ -106,6 +130,28 @@ function EditProduct() {
     setOpenSnackbar(false);
   };
 
+  const handleDelete = async () => {
+    try {
+      await deleteDoc(doc(db, "products", id));
+      setMessage({ type: "success", text: "Product deleted successfully!" });
+      setOpenSnackbar(true);
+      setTimeout(() => navigate('/admin/edit-books'), 2000);
+    } catch (error) {
+      console.error("Error deleting product: ", error);
+      setMessage({ type: "error", text: `Error deleting product: ${error.message}` });
+      setOpenSnackbar(true);
+    }
+    setOpenDeleteDialog(false);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+  };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ p: 3 }}>
@@ -114,7 +160,7 @@ function EditProduct() {
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
           message={message.text}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} // Display at the bottom of the page
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
         <Typography variant="h4" gutterBottom>
           Edit Books
@@ -123,6 +169,16 @@ function EditProduct() {
           <Grid item xs={12}>
             <StyledPaper>
               <form onSubmit={handleSubmit}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={handleOpenDeleteDialog}
+                    sx={{ mr: 2 }}
+                  >
+                    Delete Book
+                  </Button>
+                </Box>
                 <TextField
                   label="Book Title"
                   name="title"
@@ -220,14 +276,44 @@ function EditProduct() {
                   fullWidth
                   margin="normal"
                 />
-                <TextField
-                  label="Image URL"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                />
+                <FormControl component="fieldset" sx={{ mt: 2, mb: 2 }}>
+                  <FormLabel component="legend">Image Source</FormLabel>
+                  <RadioGroup
+                    row
+                    aria-label="image-source"
+                    name="imageOption"
+                    value={formData.imageOption}
+                    onChange={handleImageOptionChange}
+                  >
+                    <FormControlLabel value="url" control={<Radio />} label="Image URL" />
+                    <FormControlLabel value="file" control={<Radio />} label="Upload Image" />
+                  </RadioGroup>
+                </FormControl>
+                {formData.imageOption === 'url' ? (
+                  <TextField
+                    label="Image URL"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                ) : (
+                  <Button
+                    variant="contained"
+                    component="label"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  >
+                    Upload Image
+                    <input
+                      type="file"
+                      hidden
+                      onChange={handleChange}
+                      accept="image/*"
+                    />
+                  </Button>
+                )}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -245,6 +331,28 @@ function EditProduct() {
             </StyledPaper>
           </Grid>
         </Grid>
+
+        <Dialog
+          open={openDeleteDialog}
+          onClose={handleCloseDeleteDialog}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            {"Delete Book"}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Are you sure you want to delete this book? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+            <Button onClick={handleDelete} color="error" autoFocus>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

@@ -1,19 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import './Products.css';
 import { db } from '../../../firebase/config';
 import { collection, getDocs } from "firebase/firestore";
-import { TextField, Button, Select, MenuItem, InputLabel, FormControl, Box, Grid, Typography, Paper, Card, CardContent, CardMedia } from '@mui/material';
+import { Snackbar, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import '../Home/Home.css'; // Import Home CSS for Nav-Bar and Footer
+import Header from '../../Header/Header';
+import Footer from '../../Footer/Footer';
+import CartService from '../../../services/CartService';
+import { getAuth, onAuthStateChanged } from 'firebase/auth'; // Import Home CSS for Nav-Bar and Footer
 
 function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [category, setCategory] = useState('');
+  const [language, setLanguage] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -36,6 +50,10 @@ function Products() {
       filtered = filtered.filter(product => product.category === category);
     }
 
+    if (language) {
+      filtered = filtered.filter(product => product.language === language);
+    }
+
     if (minPrice) {
       filtered = filtered.filter(product => product.price >= minPrice);
     }
@@ -51,173 +69,171 @@ function Products() {
     navigate(`/product-details/${id}`);
   };
 
+  const handleAddToCart = async (event, product) => {
+    event.stopPropagation();
+    if (!user) {
+      navigate('/user-login');
+      return;
+    }
+
+    try {
+      const cartService = new CartService(user.uid);
+      const success = await cartService.addItem(product);
+      if (success) {
+        setSnackbar({
+          open: true,
+          message: 'Item added to cart successfully',
+          severity: 'success'
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Error adding item to cart',
+        severity: 'error'
+      });
+    }
+  };
+
   if (loading) {
-    return <p>Loading Books...</p>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+        <p className="ml-3 text-lg text-gray-600">Loading Books...</p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <section id="header" style={{ marginBottom: '150px' }}>
-        <a href="/"><img src="image/logo.jpg" alt="logo" width="25%" /></a>
-        <input type="text" placeholder="Search Books" id="search-bar" />
-
-        <div>
-          <ul id="navbar">
-            <li><a href="/" >Home</a></li>
-            <li><a href="/products" className="active">Books</a></li>
-            <li><a href="/valid-url">About</a></li>
-            <li><a href="/valid-url" id="lg-bag"><i className="fal fa-shopping-bag"></i></a>
-              <span className="quantity">0</span>
-            </li>
-            <li><a href="/valid-url" id="close"><i className="far fa-times"></i></a></li>
-          </ul>
-        </div>
-        <div id="mobile">
-          <a href="/valid-url"><i className="fal fa-shopping-bag"></i>
-            <span className="quantity">0</span>
-          </a>
-          <i id="bar" className="fas fa-outdent"></i>
-        </div>
-      </section>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
       
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Products Page
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, position: 'sticky', top: '80px', mb: 3,marginTop: '20px' }}>
-              <Typography variant="h6" gutterBottom>
+      <div className="container mx-auto px-4 py-8 mt-20">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8">
+          Discover Your Next Book
+        </h1>
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="md:w-1/4">
+            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-24">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">
                 Filters
-              </Typography>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel id="category-label">Category</InputLabel>
-                <Select
-                  labelId="category-label"
+              </h2>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  label="Category"
+                  className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2.5"
                 >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="Fiction">Fiction</MenuItem>
-                  <MenuItem value="Non-Fiction">Non-Fiction</MenuItem>
-                  <MenuItem value="Science-Fiction">Science-Fiction</MenuItem>
-                  <MenuItem value="History">History</MenuItem>
-                  <MenuItem value="Fantasy">Fantasy</MenuItem>
-                  <MenuItem value="Competitive-books">Competitive books</MenuItem>
-                  <MenuItem value="Self-help">Self-Help-personal development</MenuItem>
-                  <MenuItem value="Children's-Books">Children's Books</MenuItem>
-                  <MenuItem value="bio-auto">Biography and Autobiography</MenuItem>
-                  {/* Add more categories as needed */}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Min Price"
-                type="number"
-                fullWidth
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Max Price"
-                type="number"
-                fullWidth
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <Button variant="contained" onClick={handleFilter} fullWidth>
+                  <option value="">All Categories</option>
+                  <option value="Fiction">Fiction</option>
+                  <option value="Non-Fiction">Non-Fiction</option>
+                  <option value="Science-Fiction">Science Fiction</option>
+                  <option value="History">History</option>
+                  <option value="Fantasy">Fantasy</option>
+                  <option value="Competitive-books">Competitive Books</option>
+                  <option value="Self-help">Self-Help & Development</option>
+                  <option value="Children's-Books">Children's Books</option>
+                  <option value="bio-auto">Biography & Autobiography</option>
+                </select>
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2.5"
+                >
+                  <option value="">All Languages</option>
+                  <option value="English">English</option>
+                  <option value="Tamil">Tamil</option>
+                </select>
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price</label>
+                <input
+                  type="number"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2.5"
+                  placeholder="Enter minimum price"
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price</label>
+                <input
+                  type="number"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2.5"
+                  placeholder="Enter maximum price"
+                />
+              </div>
+              <button
+                onClick={handleFilter}
+                className="w-full bg-red-600 text-white py-2.5 px-5 rounded-lg hover:bg-red-700 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-lg"
+              >
                 Apply Filters
-              </Button>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={9}>
-            <Grid container spacing={3}>
+              </button>
+            </div>
+          </div>
+          <div className="md:w-3/4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index} sx={{ mb: 3 }}>
-                  <Card 
-                    onClick={() => handleProductClick(product.id)} 
-                    className="product-card" 
-                    sx={{ cursor: 'pointer', backgroundColor: '#f0f0f0' }}
+                <div key={index} className="group">
+                  <div 
+                    onClick={() => handleProductClick(product.id)}
+                    className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl"
                   >
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={product.imageUrl}
-                      alt={product.title || 'No title available'}
-                      sx={{ objectFit: 'contain' }}
-                    />
-                    <CardContent>
-                      <Typography variant="h6" component="div">
+                    <div className="relative pb-[60%] overflow-hidden bg-gray-100">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title || 'No title available'}
+                        className="absolute inset-0 w-full h-full object-contain p-4 transform group-hover:scale-105 transition duration-300"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-red-600">
                         {product.title || 'No title available'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-2">
                         {product.author}
-                      </Typography>
-                      <Typography variant="body1" color="text.primary">
-                        ₹{product.price}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl font-bold text-red-600">
+                          ₹{product.price}
+                        </span>
+                        <button
+                          onClick={(e) => handleAddToCart(e, product)}
+                          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300 ease-in-out transform hover:-translate-y-1"
+                          aria-label="Add to cart"
+                        >
+                          Add to Cart
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </Grid>
-          </Grid>
-        </Grid>
-      </Box>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <footer className="section-p1">
-        <div className="col">
-          <a href="/"><img className="logo" src="image/logo.jpg" alt="logo" width="10%"/></a>
-          <h4>Contact</h4>
-          <p><strong>Address:</strong> sivakasi , North street weak</p>
-          <p><strong>Phone:</strong> +23456876199, +23458903120</p>
-          <p><strong>Hours:</strong> 10.00 - 18.00, Mon - Sat</p>
-          <div className="follow">
-            <h4>Follow Us</h4>
-            <div className="icon">
-              <i className="fab fa-facebook-f"></i>
-              <i className="fab fa-instagram"></i>
-              <i className="fab fa-twitter"></i>
-              <i class="fab fa-youtube"></i>
-              <i class="fab fa-pinterest-p"></i>
-            </div>
-          </div>
-        </div>
-        <div className="sec">
-          <div className="col">
-            <h4>About</h4>
-            <a href="/valid-url">About Us</a>
-            <a href="/valid-url">Delivery Information</a>
-            <a href="/valid-url">Privacy Policy</a>
-            <a href="/valid-url">Terms and Condition</a>
-            <a href="/valid-url">Contact Us</a>
-          </div>
-          <div className="col">
-            <h4>My Account</h4>
-            <a href="/valid-url">Sign In</a>
-            <a href="/valid-url">View Cart</a>
-            <a href="/valid-url">My Account</a>
-            <a href="/valid-url">My Wishlist</a>
-            <a href="/valid-url">Track my Order</a>
-            <a href="/valid-url">Help</a>
-          </div>
-          <div className="col install">
-            <h4>Install App</h4>
-            <p>From App Store or Google Play</p>
-            <div className="row">
-              <img src="https://i.postimg.cc/Y2s5mLdR/app.jpg" alt="" />
-              <img src="https://i.postimg.cc/7YvyWTS6/play.jpg" alt="" />
-            </div>
-            <p>Secured Payment Gateways</p>
-            <img src="https://i.postimg.cc/kgfzqVRW/pay.png" alt="" />
-          </div>
-        </div>
-        <div className="coypright">
-          <p>© 2023 All rights reserved! made by Tunrayo</p>
-        </div>
-      </footer>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      <Footer />
     </div>
   );
 }

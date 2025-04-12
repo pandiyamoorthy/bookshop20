@@ -158,7 +158,7 @@ function ViewProduct() {
                   <TableCell>ID</TableCell> {/* Add ID column */}
                   <TableCell>Actions</TableCell>
                 </TableRow>
-              </TableHead>
+              </TableHead>   
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>

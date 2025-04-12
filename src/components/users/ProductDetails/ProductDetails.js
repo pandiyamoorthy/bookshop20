@@ -1,22 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { db } from '../../../firebase/config';
-import { doc, getDoc, getDocs, collection } from "firebase/firestore"; // Import getDocs and collection
-import { Box, Typography, Paper, Grid, Button, Breadcrumbs, Link as MuiLink, Rating, MenuItem, Select, FormControl, InputLabel, IconButton, InputBase, List, ListItem, ListItemText, ClickAwayListener } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import { doc, getDoc } from "firebase/firestore";
+import { getAuth } from 'firebase/auth';
+import CartService from '../../../services/CartService';
+import { Box, Typography, Paper, Grid, Button, Breadcrumbs, Link as MuiLink, Rating, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import Header from '../../Header/Header';
+import Footer from '../../Footer/Footer';
 import './ProductDetails.css';
+
 
 function ProductDetails() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [products, setProducts] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
-  const searchBoxRef = useRef(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -38,57 +37,6 @@ function ProductDetails() {
     fetchProduct();
   }, [id]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const querySnapshot = await getDocs(collection(db, "products"));
-      const productsList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setProducts(productsList);
-    };
-
-    fetchProducts();
-  }, []);
-
-  const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-
-    if (value.length > 0) {
-      const filteredSuggestions = products.filter(product =>
-        product.title.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 5); // Limit suggestions to 5
-      setSuggestions(filteredSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const handleKeyPress = async (e) => {
-    if (e.key === 'Enter') {
-      await performSearch();
-    }
-  };
-
-  const handleSearchClick = async () => {
-    await performSearch();
-  };
-
-  const performSearch = async () => {
-    navigate(`/search-results?search=${searchTerm}`);
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    setSearchTerm(suggestion.title);
-    navigate(`/search-results?search=${suggestion.title}`);
-    setSuggestions([]);
-  };
-
-  const handleClickAway = () => {
-    setSuggestions([]);
-  };
-
   if (loading) {
     return <p>Loading Book Details...</p>;
   }
@@ -97,14 +45,55 @@ function ProductDetails() {
     return <p>Book not found.</p>;
   }
 
-  const handleAddToCart = () => {
-    // Add to cart logic here
-    console.log("Added to cart:", product);
+  const handleAddToCart = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      navigate('/user-login');
+      return;
+    }
+
+    try {
+      const cartService = new CartService(user.uid);
+      const cartItem = {
+        id,
+        title: product.title,
+        author: product.author,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        quantity: quantity
+      };
+      
+      await cartService.addItem(cartItem);
+      navigate('/cart');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
   };
 
   const handleBuyNow = () => {
-    // Buy now logic here
-    console.log("Buy now:", product);
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      navigate('/user-login');
+      return;
+    }
+    const totalAmount = product.price * quantity;
+    navigate('/order', { 
+      state: { 
+        products: [{
+          id,
+          title: product.title,
+          author: product.author,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          quantity: quantity
+        }],
+        totalAmount: totalAmount
+      } 
+    });
   };
 
   const handleAddToWishlist = () => {
@@ -113,72 +102,10 @@ function ProductDetails() {
   };
 
   return (
-    <Box sx={{ p: 3, background: 'linear-gradient(to right, #f8f9fa, #e9ecef)' }}>
-      <section id="header">
-        <a href="/"><img src="image/logo.jpg" alt="logo" width="30%"/></a>
-        
-        <div>
-          <ul id="navbar">
-            <li>
-              <ClickAwayListener onClickAway={handleClickAway}>
-                <Paper
-                  ref={searchBoxRef}
-                  component="form"
-                  sx={{ display: 'flex', alignItems: 'center', width: 400, boxShadow: 1, borderRadius: 1, position: 'relative', overflow: 'visible' }}
-                >
-                  <InputBase
-                    sx={{ ml: 1, flex: 1 }}
-                    placeholder="Search Books"
-                    inputProps={{ 'aria-label': 'search books' }}
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    onKeyPress={handleKeyPress}
-                  />
-                  <IconButton type="button" sx={{ p: '10px' }} aria-label="search" onClick={handleSearchClick}>
-                    <SearchIcon />
-                  </IconButton>
-                  {suggestions.length > 0 && (
-                    <List sx={{ position: 'absolute', top: '100%', left: 0, right: 0, bgcolor: 'background.paper', zIndex: 10, boxShadow: 3, borderRadius: 1 }}>
-                      {suggestions.map((suggestion, index) => (
-                        <ListItem button key={index} onClick={() => handleSuggestionClick(suggestion)}>
-                          <ListItemText primary={suggestion.title} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </Paper>
-              </ClickAwayListener>
-            </li>
-            <li><a href="/" className="active">Home</a></li>
-            <li><a href="/products">Books</a></li>
-            <li><a href="/valid-url">About</a></li>
-            <li className="dropdown">
-              <a href="/valid-url" className="dropbtn">
-                <AccountCircleIcon sx={{ mr: 1 }} />
-              </a>
-              <div className="dropdown-content">
-                <Link to="/cart">Add to Cart</Link>
-                <Link to="/wishlist">My Wishlist</Link>
-                <Link to="/order-history">Order History</Link>
-              </div>
-            </li>
-            <li><a href="/cart"><i className="fas fa-shopping-cart"></i></a></li> {/* Cart Icon */}
-            <li><a href="/order-history"><i className="fas fa-box"></i></a></li> {/* Order Icon */}
-            <li><a href="/valid-url" id="lg-bag"><i className="fal fa-shopping-bag"></i></a>
-              <span className="quantity">0</span>
-            </li>
-            <li><a href="/valid-url" id="close"><i className="far fa-times"></i></a></li>
-          </ul>
-        </div>
-        <div id="mobile">
-          <a href="/valid-url"><i className="fal fa-shopping-bag"></i>
-            <span className="quantity">0</span>
-          </a>
-          <i id="bar" className="fas fa-outdent"></i>
-        </div>
-      </section>
+    <Box sx={{ p: 3, background: 'linear-gradient(to right, #f8f9fa, #e9ecef)', marginTop: '70px' }}>
+      <Header />
 
-      <Paper sx={{ p: 3, boxShadow: 3, borderRadius: '8px' }} className="product-details-container">
+      <Paper sx={{ p: 3, boxShadow: 3, borderRadius: '8px' , marginTop:'20px' }} className="product-details-container">
         <Grid container spacing={3}>
           <Grid item xs={12} md={5} sx={{ position: 'relative' }}>
             <img src={product.imageUrl} alt={product.title} className="product-image" style={{ width: '70%', height: 'auto', maxHeight: '400px', borderRadius: '8px' }} />
@@ -238,6 +165,7 @@ function ProductDetails() {
           </Grid>
         </Grid>
       </Paper>
+      <Footer />
     </Box>
   );
 }

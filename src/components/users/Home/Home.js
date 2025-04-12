@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Home.css';
-import { Link, useNavigate } from 'react-router-dom';
+import ImageSlider from './ImageSlider';
+import CategoryNav from './CategoryNav';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../../firebase/config';
 import { collection, getDocs } from "firebase/firestore";
-import { Box, Grid, Card, CardContent, CardMedia, Typography, InputBase, IconButton, Paper, List, ListItem, ListItemText, ClickAwayListener } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle'; // Import AccountCircleIcon
+import { Box, Grid, Card, CardContent, CardMedia, Typography } from '@mui/material';
+import Header from '../../Header/Header';
+import Footer from '../../Footer/Footer';
 
 const Home = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
+  const [featuredBooks, setFeaturedBooks] = useState([]);
+  const [trendingBooks, setTrendingBooks] = useState([]);
+  const [topSellingBooks, setTopSellingBooks] = useState([]);
   const navigate = useNavigate();
-  const searchBoxRef = useRef(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -21,158 +23,143 @@ const Home = () => {
       const productsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).filter(product => product.visibility === true);
+      
       setProducts(productsList);
+      
+      // Set featured books (books with high ratings)
+      const featured = productsList
+        .filter(product => product.rating >= 4.5)
+        .slice(0, 4);
+      setFeaturedBooks(featured);
+      
+      // Set trending books (most reviewed books)
+      const trending = productsList
+        .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
+        .slice(0, 4);
+      setTrendingBooks(trending);
+
+      // Set top selling books (from top-selling category)
+      const topSelling = productsList
+        .filter(product => product.category === 'top-selling')
+        .slice(0, 4);
+      setTopSellingBooks(topSelling);
     };
 
     fetchProducts();
   }, []);
 
-  const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-
-    if (value.length > 0) {
-      const filteredSuggestions = products.filter(product =>
-        product.title.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 5); // Limit suggestions to 5
-      setSuggestions(filteredSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const handleKeyPress = async (e) => {
-    if (e.key === 'Enter') {
-      await performSearch();
-    }
-  };
-
-  const handleSearchClick = async () => {
-    await performSearch();
-  };
-
-  const performSearch = async () => {
-    navigate(`/search-results?search=${searchTerm}`);
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    setSearchTerm(suggestion.title);
-    navigate(`/search-results?search=${suggestion.title}`);
-    setSuggestions([]);
-  };
-
   const handleProductClick = (id) => {
     navigate(`/product-details/${id}`);
   };
 
-  const handleClickAway = () => {
-    setSuggestions([]);
-  };
+  const BookCard = ({ product }) => (
+    <div
+      onClick={() => handleProductClick(product.id)}
+      className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 overflow-hidden"
+    >
+      <div className="relative h-56 w-full bg-gray-50">
+        <img
+          src={product.imageUrl}
+          alt={product.title || 'No title available'}
+          className="w-full h-full object-contain p-4"
+        />
+        {product.offer && (
+          <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold transform rotate-3 shadow-md">
+            {product.offer}% OFF
+          </div>
+        )}
+      </div>
+      <div className="p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
+          {product.title || 'No title available'}
+        </h3>
+        <p className="text-sm text-gray-600 mb-3 italic">
+          by {product.author}
+        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-2xl font-bold text-red-600">
+              ₹{product.price}
+            </p>
+            {product.originalPrice && (
+              <p className="text-sm text-gray-500 line-through">
+                ₹{product.originalPrice}
+              </p>
+            )}
+          </div>
+          <div className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+            {product.category}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div>
-      <section id="header">
-        <a href="/"><img src="image/logo.jpg" alt="logo" width="30%"/></a>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      <Header />
+      <CategoryNav />
+      <ImageSlider />
+
+      <div className="container mx-auto px-4 py-12">
         
-        <div>
-          <ul id="navbar">
-            <li>
-              <ClickAwayListener onClickAway={handleClickAway}>
-                <Paper
-                  ref={searchBoxRef}
-                  component="form"
-                  sx={{ display: 'flex', alignItems: 'center', width: 400, boxShadow: 1, borderRadius: 1, position: 'relative', overflow: 'visible' }}
-                >
-                  <InputBase
-                    sx={{ ml: 1, flex: 1 }}
-                    placeholder="Search Books"
-                    inputProps={{ 'aria-label': 'search books' }}
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    onKeyPress={handleKeyPress}
-                  />
-                  <IconButton type="button" sx={{ p: '10px' }} aria-label="search" onClick={handleSearchClick}>
-                    <SearchIcon />
-                  </IconButton>
-                  {suggestions.length > 0 && (
-                    <List sx={{ position: 'absolute', top: '100%', left: 0, right: 0, bgcolor: 'background.paper', zIndex: 10, boxShadow: 3, borderRadius: 1 }}>
-                      {suggestions.map((suggestion, index) => (
-                        <ListItem button key={index} onClick={() => handleSuggestionClick(suggestion)}>
-                          <ListItemText primary={suggestion.title} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </Paper>
-              </ClickAwayListener>
-            </li>
-            <li><a href="/" className="active">Home</a></li>
-            <li><a href="/products">Books</a></li>
-            <li><a href="/valid-url">About</a></li>
-            <li className="dropdown">
-              <a href="/valid-url" className="dropbtn">
-                <AccountCircleIcon sx={{ mr: 1 }} />
-              </a>
-              <div className="dropdown-content">
-                <Link to="/cart">Add to Cart</Link>
-                <Link to="/wishlist">My Wishlist</Link>
-                <Link to="/order-history">Order History</Link>
-              </div>
-            </li>
-            <li><a href="/cart"><i className="fas fa-shopping-cart"></i></a></li> {/* Cart Icon */}
-            <li><a href="/order-history"><i className="fas fa-box"></i></a></li> {/* Order Icon */}
-            <li><a href="/valid-url" id="lg-bag"><i className="fal fa-shopping-bag"></i></a>
-              <span className="quantity">0</span>
-            </li>
-            <li><a href="/valid-url" id="close"><i className="far fa-times"></i></a></li>
-          </ul>
+
+        <div className="mb-16">
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">
+            Top Selling Books
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {topSellingBooks.map((product, index) => (
+              <BookCard key={index} product={product} />
+            ))}
+          </div>
         </div>
-        <div id="mobile">
-          <a href="/valid-url"><i className="fal fa-shopping-bag"></i>
-            <span className="quantity">0</span>
-          </a>
-          <i id="bar" className="fas fa-outdent"></i>
+
+        <div className="mb-16">
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">
+            Top Trending Books
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {trendingBooks.map((product, index) => (
+              <BookCard key={index} product={product} />
+            ))}
+          </div>
         </div>
-      </section>
+
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-white mb-16 transform hover:scale-[1.02] transition-transform duration-300 shadow-xl">
+          <h2 className="text-4xl font-bold mb-6 text-center">Welcome to Barathy Books</h2>
+          <p className="text-xl mb-12 text-center text-blue-100">Discover a world of knowledge with our carefully curated collection of books.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 hover:bg-white/20 transition-colors duration-300">
+              <h3 className="text-2xl font-semibold mb-4">Wide Selection</h3>
+              <p className="text-blue-100">Browse through thousands of titles across multiple genres</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 hover:bg-white/20 transition-colors duration-300">
+              <h3 className="text-2xl font-semibold mb-4">Best Prices</h3>
+              <p className="text-blue-100">Get the best deals on your favorite books</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 hover:bg-white/20 transition-colors duration-300">
+              <h3 className="text-2xl font-semibold mb-4">Fast Delivery</h3>
+              <p className="text-blue-100">Quick and reliable delivery to your doorstep</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {filteredProducts.length > 0 && (
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h4" gutterBottom>
+        <div className="container mx-auto px-4 py-8">
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">
             Search Results
-          </Typography>
-          <Grid container spacing={3}>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index} sx={{ mb: 3 }}>
-                <Card 
-                  onClick={() => handleProductClick(product.id)} 
-                  className="product-card" 
-                  sx={{ cursor: 'pointer', backgroundColor: '#f0f0f0' }}
-                >
-                  <CardMedia
-                    component="img"
-                    height="200"
-                    image={product.imageUrl}
-                    alt={product.title || 'No title available'}
-                    sx={{ objectFit: 'contain' }}
-                  />
-                  <CardContent>
-                    <Typography variant="h6" component="div">
-                      {product.title || 'No title available'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {product.author}
-                    </Typography>
-                    <Typography variant="body1" color="text.primary">
-                      ₹{product.price}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <BookCard key={index} product={product} />
             ))}
-          </Grid>
-        </Box>
+          </div>
+        </div>
       )}
+      <Footer />
     </div>
   );
 };

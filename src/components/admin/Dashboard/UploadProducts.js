@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { db } from '../../../firebase/config';
+import { db, storage } from '../../../firebase/config';
 import { collection, addDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as XLSX from 'xlsx';
 import { TextField, Button, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, Alert, Box, Typography, Grid, Paper, FormControl, FormLabel, RadioGroup, Radio } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -66,15 +67,13 @@ function UploadProducts() {
     try {
       let imageUrl = formData.imageUrl;
       if (imageOption === 'file' && imageFile) {
-        // Upload image file to storage and get URL (implementation depends on your storage solution)
-        // For example, using Firebase Storage:
-        // const storageRef = firebase.storage().ref();
-        // const fileRef = storageRef.child(imageFile.name);
-        // await fileRef.put(imageFile);
-        // imageUrl = await fileRef.getDownloadURL();
+        const storageRef = ref(storage, `products/${Date.now()}-${imageFile.name}`);
+        await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(storageRef);
       }
       await addDoc(collection(db, "products"), { ...formData, imageUrl });
       setMessage("Product uploaded successfully!");
+      setTimeout(() => setMessage(""), 5000);
       setFormData({
         title: '',
         author: '',
@@ -93,6 +92,7 @@ function UploadProducts() {
     } catch (error) {
       console.error("Error uploading product: ", error);
       setMessage(`Error uploading product: ${error.message}`);
+      setTimeout(() => setMessage(""), 5000);
     }
   };
 

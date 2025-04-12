@@ -106,14 +106,7 @@ function AdminPage() {
               >
                 Login
               </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mb: 2 }}
-                onClick={handleRegister}
-              >
-                Register
-              </Button>
+
             </Box>
           </Box>
         </Paper>
